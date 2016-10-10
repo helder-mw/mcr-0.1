@@ -1,0 +1,95 @@
+#!/usr/bin/env bash
+# bin/compile <build-dir> <cache-dir> <env-dir>
+
+set -e
+set -o pipefail   # dont ignore exit codes when piping output
+set -o nounset    # fail on unset variables
+unset GIT_DIR     # Avoid GIT_DIR leak from previous build steps
+
+### Constants
+
+# DEFAULT_CACHE="node_modules bower_components"
+
+### Configure directories
+
+BUILD_DIR=${1:-}
+CACHE_DIR=${2:-}
+ENV_DIR=${3:-}
+BP_DIR=$(cd $(dirname ${0:-}); cd ..; pwd)
+LOG_FILE='/tmp/mcr-build-log.txt'
+
+SOURCE_DIR="${BP_DIR}/NumericsMCR"
+TARGET_DIR="${BUILD_DIR}/NumericsMCR"
+
+mkdir -p "$TARGET_DIR"
+cd "$BUILD_DIR"
+export PATH="${TARGET_DIR}:${PATH}"
+
+echo "" > "$LOG_FILE"
+
+### Handle errors
+
+handle_failure() {
+  echo "Failure detected" >> "$LOG_FILE"
+}
+trap 'handle_failure' ERR
+
+### Compile
+# echo "Starting copy of binary files" >> "$LOG_FILE"
+# echo "Source is $SOURCE_DIR" >> "$LOG_FILE"
+# echo "Target is $TARGET_DIR" >> "$LOG_FILE"
+
+# cp -r "$SOURCE_DIR" "$TARGET_DIR"
+
+# echo "Build succeeded!" >> "$LOG_FILE"
+
+### Download MCR from Google Drive (hack to bypass Github file size restriction)
+GDRIVE_ID=0B6l2ptYUy4d_a0RTLWZ0V1d6QU0  
+GDRIVE_URL='https://drive.google.com/uc?export=download'  
+GDRIVE_FILENAME="$(curl -sc /tmp/gcokie "${GDRIVE_URL}&id=${GDRIVE_ID}" | grep -o '="uc-name.*</span>' | sed 's/.*">//;s/<.a> .*//')"  
+GDRIVE_CODE="$(awk '/_warning_/ {print $NF}' /tmp/gcokie)"  
+curl -Lb /tmp/gcokie "${GDRIVE_URL}&confirm=${GDRIVE_CODE}&id=${GDRIVE_ID}" -o "${GDRIVE_FILENAME}"
+
+echo "Download completed!" >> "$LOG_FILE"
+
+### Unzip MCR (hack to bypass Github file size restriction)
+unzip "${GDRIVE_FILENAME}"
+
+echo "Unzip completed!" >> "$LOG_FILE"
+
+### Environment variables
+echo "Setting up environment variables" >> "$LOG_FILE"
+
+MCRROOT="$TARGET_DIR"
+
+LD_LIBRARY_PATH=.:${MCRROOT}/runtime/glnxa64
+LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${MCRROOT}/bin/glnxa64
+LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${MCRROOT}/sys/os/glnxa64
+LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${MCRROOT}/sys/opengl/lib/glnxa64
+
+export MCRROOT LD_LIBRARY_PATH
+
+### Create a startup script
+STARTUP_FILE=${BUILD_DIR}/startup.sh
+
+cat << EOF > "$STARTUP_FILE"
+#!/usr/bin/env bash
+
+MCRROOT=$MCRROOT
+LD_LIBRARY_PATH=$LD_LIBRARY_PATH
+
+export MCRROOT LD_LIBRARY_PATH
+
+# Prevent startup script from exiting, otherwise
+# Cloud Foundry will think we crashed.
+while [ true ]
+do
+	sleep 100000
+done
+EOF
+
+chmod +x "$STARTUP_FILE"
+
+### Final log
+echo "MCRROOT is ${MCRROOT}" >> "$LOG_FILE"
+echo "LD_LIBRARY_PATH is ${LD_LIBRARY_PATH}" >> "$LOG_FILE"

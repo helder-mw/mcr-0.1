@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# bin/detect <build-dir>
+
+# BP=$("dirname $("dirname $0")")
+
+FOUND_MCRRT=0
+
+for FILE in "${1}/*"
+do
+  if [ -f "$FILE" ]
+  then
+    ldd "$FILE" | grep mcrrt
+	ST=$?
+	if [ $ST -eq 0 ]
+	then
+	  FOUND_MCRRT=1
+	  break
+	fi
+  fi
+done
+
+if [ $FOUND_MCRRT -eq 1 ]; then
+  echo "MATLAB v0.1"
+  exit 0
+fi
+
+exit 1
