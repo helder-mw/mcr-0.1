@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # bin/compile <build-dir> <cache-dir> <env-dir>
 
-echo "Starting compile script"
+echo "Starting compile script" 1>&2
 
 set -e
 set -o pipefail   # dont ignore exit codes when piping output
@@ -56,6 +56,7 @@ echo "Download completed!" >> "$LOG_FILE"
 
 ### Unzip MCR (hack to bypass Github file size restriction)
 unzip "${GDRIVE_FILENAME}"
+rm "${GDRIVE_FILENAME}"
 
 echo "Unzip completed!" >> "$LOG_FILE"
 
