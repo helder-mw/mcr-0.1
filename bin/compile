@@ -1,9 +1,6 @@
 #!/usr/bin/env bash
 # bin/compile <build-dir> <cache-dir> <env-dir>
 
-stdbuf -o0 -e0 echo "Starting compile script"
-stdbuf -o0 -e0 echo "Starting compile script" 1>&2
-
 set -e
 set -o pipefail   # dont ignore exit codes when piping output
 set -o nounset    # fail on unset variables
@@ -28,23 +25,23 @@ mkdir -p "$TARGET_DIR"
 cd "$BUILD_DIR"
 export PATH="${TARGET_DIR}:${PATH}"
 
-echo "" > "$LOG_FILE"
+echo "Starting compile script" | tee "$LOG_FILE"
 
 ### Handle errors
 
 handle_failure() {
-  echo "Failure detected" >> "$LOG_FILE"
+  echo "Failure detected" | tee -a "$LOG_FILE"
 }
 trap 'handle_failure' ERR
 
 ### Compile
-# echo "Starting copy of binary files" >> "$LOG_FILE"
-# echo "Source is $SOURCE_DIR" >> "$LOG_FILE"
-# echo "Target is $TARGET_DIR" >> "$LOG_FILE"
+# echo "Starting copy of binary files" | tee -a "$LOG_FILE"
+# echo "Source is $SOURCE_DIR" | tee -a "$LOG_FILE"
+# echo "Target is $TARGET_DIR" | tee -a "$LOG_FILE"
 
 # cp -r "$SOURCE_DIR" "$TARGET_DIR"
 
-# echo "Build succeeded!" >> "$LOG_FILE"
+# echo "Build succeeded!" | tee -a "$LOG_FILE"
 
 ### Download MCR from Google Drive (hack to bypass Github file size restriction)
 GDRIVE_ID=0B6l2ptYUy4d_a0RTLWZ0V1d6QU0  
@@ -53,16 +50,18 @@ GDRIVE_FILENAME="$(curl -sc /tmp/gcokie "${GDRIVE_URL}&id=${GDRIVE_ID}" | grep -
 GDRIVE_CODE="$(awk '/_warning_/ {print $NF}' /tmp/gcokie)"  
 curl -Lb /tmp/gcokie "${GDRIVE_URL}&confirm=${GDRIVE_CODE}&id=${GDRIVE_ID}" -o "${GDRIVE_FILENAME}"
 
-echo "Download completed!" >> "$LOG_FILE"
+echo "Download completed!" | tee -a "$LOG_FILE"
 
 ### Unzip MCR (hack to bypass Github file size restriction)
-unzip "${GDRIVE_FILENAME}"
-rm "${GDRIVE_FILENAME}"
+echo "Unzipping MCR..." | tee -a "$LOG_FILE"
 
-echo "Unzip completed!" >> "$LOG_FILE"
+unzip -q "${GDRIVE_FILENAME}"
+rm -f "${GDRIVE_FILENAME}"
+
+echo "Unzip completed!" | tee -a "$LOG_FILE"
 
 ### Environment variables
-echo "Setting up environment variables" >> "$LOG_FILE"
+echo "Setting up environment variables" | tee -a "$LOG_FILE"
 
 MCRROOT="$TARGET_DIR"
 
@@ -95,5 +94,5 @@ EOF
 chmod +x "$STARTUP_FILE"
 
 ### Final log
-echo "MCRROOT is ${MCRROOT}" >> "$LOG_FILE"
-echo "LD_LIBRARY_PATH is ${LD_LIBRARY_PATH}" >> "$LOG_FILE"
+echo "MCRROOT is ${MCRROOT}" | tee -a "$LOG_FILE"
+echo "LD_LIBRARY_PATH is ${LD_LIBRARY_PATH}" | tee -a "$LOG_FILE"
