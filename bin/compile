@@ -63,7 +63,7 @@ echo "Unzip completed!" | tee -a "$LOG_FILE"
 ### Environment variables
 echo "Setting up environment variables" | tee -a "$LOG_FILE"
 
-MCRROOT="$TARGET_DIR"
+MCRROOT="${TARGET_DIR}/v91"
 
 LD_LIBRARY_PATH=.:${MCRROOT}/runtime/glnxa64
 LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${MCRROOT}/bin/glnxa64
